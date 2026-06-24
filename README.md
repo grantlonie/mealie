@@ -52,6 +52,47 @@ Mealie is a self hosted recipe manager, meal planner and shopping list with a Re
 - Docker: Easy **Docker** deployment
 - Localisation: **Translations** for 35+ languages
 
+## Personal Infra Deployment
+
+This fork includes a Compose file for running Mealie as an app repo beside
+`../personal-infra`. The shared infra stack owns Postgres, Caddy, backups, and
+the external Docker network.
+
+Start the shared infra stack first:
+
+```bash
+cd ../personal-infra
+docker compose up -d
+```
+
+Configure Mealie from this repo:
+
+```bash
+cp .env.personal-infra.example .env.personal-infra
+```
+
+Set `POSTGRES_PASSWORD` in `.env.personal-infra` to the same value as
+`MEALIE_POSTGRES_PASSWORD` in `../personal-infra/.env`, and set
+`MEALIE_BASE_URL` to the public Caddy hostname.
+
+Run Mealie:
+
+```bash
+docker compose --env-file .env.personal-infra -f docker-compose.personal-infra.yml up -d --build
+```
+
+The service joins the `personal-infra-shared` network, listens internally on
+port `9000`, stores app data at `/srv/apps/mealie/data`, and connects to the
+shared Postgres service at `personal-infra-postgres:5432`.
+
+Expose it through Caddy in `../personal-infra/caddy/Caddyfile`:
+
+```caddyfile
+recipes.example.com {
+	reverse_proxy mealie:9000
+}
+```
+
 <!-- CONTRIBUTING -->
 ## Contributing
 
